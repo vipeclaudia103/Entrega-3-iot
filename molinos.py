@@ -1,8 +1,9 @@
 import json
 import os
 import random
-import datetime
 import string
+import datetime
+import threading
 
 # Definir modelos y ubicaciones constantes para cada molino
 info_modelos = [
@@ -26,7 +27,7 @@ info_modelos = [
         "modelo": "PC21",
         "ubicacion": "Biota"
     },
-        {
+    {
         "id": 7823,
         "modelo": "G58",
         "ubicacion": "Valle de Peraleda"
@@ -51,13 +52,12 @@ info_modelos = [
         "modelo": "PC21",
         "ubicacion": "Lorbes"
     },
-        {
+    {
         "id": 7465,
         "modelo": "G58",
         "ubicacion": "Lorbes"
     }
 ]
-
 
 def letras_aleatorias():
     return ''.join(random.choices(string.ascii_letters, k=3))
@@ -73,9 +73,10 @@ def generate_windmill_data(mill_id):
     # --- Probabilidad de datos erroneos -----
     p_error = random.uniform(0, 100)
     if p_error < 25:
-        wind_speed = wind_speed * (-2)
+        wind_speed *= -2
     elif p_error > 80:
-        power_output =letras_aleatorias() # Devuelve 3 leatras aleatorias en lugar de numeros
+        power_output = letras_aleatorias()  # Devuelve 3 letras aleatorias en lugar de números
+    
     # Obtener modelo y ubicación para el molino
     id = info_modelos[mill_id]["id"]
     modelo = info_modelos[mill_id]["modelo"]
@@ -93,34 +94,31 @@ def generate_windmill_data(mill_id):
         }
     }
 
-    return json.dumps(data)
-def generate_multiple_windmill_data(num_mills):
-    """
-    Función para generar datos de múltiples molinos de viento.
-    """
-    mills_data = []
-    for i in range(num_mills):
-        # mill_id = f"mill_{i + 1}"
-        mill_data = generate_windmill_data(i)
-        mills_data.append(mill_data)
-
-    return mills_data
+    return data
 
 def save_data_to_json(data, filename):
     """
     Función para guardar datos en un archivo JSON.
     """
-    
     # Comprobar si el directorio existe, si no, crearlo
     if not os.path.exists(filename):
         os.makedirs(filename)
     
     # Escribir los datos en el archivo molinos.json dentro del directorio
     with open(os.path.join(filename, "molinos.json"), "a") as file:
-        json.dump(data, file, indent=4)
+        file.write(data + "\n")
 
-if __name__ == "__main__":
-    num_mills = 10  # Número de molinos de viento
-    mills_data = generate_multiple_windmill_data(num_mills)
-    directory = "/home/cvp/Entrega-3-iot/data"
-    save_data_to_json(mills_data, directory)
+def generar_periodicamente():
+    global ESPERA
+    t = threading.Timer(ESPERA, generar_periodicamente)
+    t.start()
+    
+    global NUM_MOLINOS
+    for i in range(NUM_MOLINOS):
+        datos = generate_windmill_data(i)
+        directory = "/home/cvp/Entrega-3-iot/data"
+        # save_data_to_json(datos, directory)
+
+NUM_MOLINOS = 10
+ESPERA = 10
+generar_periodicamente()
