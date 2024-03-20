@@ -11,8 +11,9 @@ Repositorio para la entrega de la tercera práctica en la asignatura de Desarrol
     ```
     Ejecución de las llamadas: 
     ```bash 
+    cd Entrega-3-iot
     export PATH="$PATH:/home/cvp/.local/bin"
-    uvicorn main:app --reload
+    uvicorn main:molinos --reload    
     ```
     url para los datos http://127.0.0.1:8000/ 
     url para documentacion http://127.0.0.1:8000/docs#/

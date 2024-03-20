@@ -5,78 +5,107 @@ import string
 import datetime
 import threading
 
+import requests
+
 # Definir modelos y ubicaciones constantes para cada molino
 info_modelos = [
     {
         "id": 1437,
         "modelo": "G58",
-        "ubicacion": "Biota"
+        "ubicacion": "Biota Zona Norte"
     },    
     {
         "id": 9083,
         "modelo": "BS32",
-        "ubicacion": "Biota"
+        "ubicacion": "Biota Zona Sur"
     },
     {
         "id": 8740,
         "modelo": "DW33",
-        "ubicacion": "Biota"
+        "ubicacion": "Biota Zona Oeste"
     },    
     {
         "id": 4524,
         "modelo": "PC21",
-        "ubicacion": "Biota"
+        "ubicacion": "Biota Zona Sur"
     },
     {
         "id": 7823,
         "modelo": "G58",
-        "ubicacion": "Valle de Peraleda"
+        "ubicacion": "Biota Zona Este"
     },        
     {
         "id": 6843,
         "modelo": "G58",
-        "ubicacion": "Valle de Peraleda"
+        "ubicacion": "Biota Zona Norte"
     },    
     {
         "id": 3931,
         "modelo": "BS32",
-        "ubicacion": "Merindad"
+        "ubicacion": "Biota Zona Sur"
     },
     {
         "id": 2938,
         "modelo": "G58",
-        "ubicacion": "Merindad"
+        "ubicacion": "Biota Zona Oeste"
     },    
     {
         "id": 4323,
         "modelo": "PC21",
-        "ubicacion": "Lorbes"
+        "ubicacion": "Biota Zona Central"
     },
     {
         "id": 7465,
         "modelo": "G58",
-        "ubicacion": "Lorbes"
+        "ubicacion": "Biota Zona Este"
     }
 ]
 
 def letras_aleatorias():
     return ''.join(random.choices(string.ascii_letters, k=3))
 
-def generate_windmill_data(mill_id):
+def generate_windmill_data(mill_id, probabilidad_error):
     """
     Función para generar datos simulados de un molino de viento.
     """
     timestamp = datetime.datetime.now().isoformat()
-    wind_speed = round(random.uniform(0, 25), 2)  # Velocidad del viento en m/s
-    power_output = round(random.uniform(0, 100), 2)  # Salida de energía en watts
+    velocidad_viento = round(random.uniform(0, 25), 2)  # Velocidad del viento en m/s
+    direccion_viento = round(random.uniform(0, 360), 2)  # Dirección del viento en grados
+    produccion_energia = round(random.uniform(0, 1000), 2)  # Producción de energía en kW
+    temperatura_ambiente = round(random.uniform(-10, 40), 2)  # Temperatura ambiente en °C
+    humedad = round(random.uniform(0, 100), 2)  # Humedad relativa en %
+    presion_atmosferica = round(random.uniform(900, 1100), 2)  # Presión atmosférica en hPa
+    vibraciones = round(random.uniform(0, 5), 2)  # Nivel de vibraciones en mm/s^2
+    
     
     # --- Probabilidad de datos erroneos -----
-    p_error = random.uniform(0, 100)
-    if p_error < 25:
-        wind_speed *= -2
-    elif p_error > 80:
-        power_output = letras_aleatorias()  # Devuelve 3 letras aleatorias en lugar de números
-    
+    # Aplicar posibles errores
+    if random.random() < probabilidad_error:
+        value = "Error de lectura"
+    else:
+        if random.random() <  probabilidad_error:
+            velocidad_viento *= -1    # Vuelve la velocidad negativa 
+        elif random.random() <  probabilidad_error:
+            produccion_energia = letras_aleatorias()  # Devuelve 3 letras aleatorias en lugar de números
+        elif random.random() <  probabilidad_error:
+            temperatura_ambiente *= 100     # Eleva la temperatura por 100
+        elif random.random() <  probabilidad_error:
+            direccion_viento = letras_aleatorias()  # Devuelve 3 letras aleatorias en lugar de números
+        elif random.random() <  probabilidad_error:
+            presion_atmosferica *= -20     # Disminuye la presión 20 veces
+        elif random.random() <  probabilidad_error:
+            humedad = letras_aleatorias()  # Devuelve 3 letras aleatorias en lugar de números
+        elif random.random() <  probabilidad_error:
+            vibraciones = letras_aleatorias()
+    value = {
+            "velocidad_viento": velocidad_viento,
+            "direccion_viento": direccion_viento,
+            "produccion_energia":produccion_energia,
+            "temperatura_ambiente": temperatura_ambiente,
+            "humedad": humedad,
+            "presion_atmosferica": presion_atmosferica,
+            "vibraciones": vibraciones
+        }    
     # Obtener modelo y ubicación para el molino
     id = info_modelos[mill_id]["id"]
     modelo = info_modelos[mill_id]["modelo"]
@@ -88,10 +117,7 @@ def generate_windmill_data(mill_id):
         "model": modelo,
         "location": ubicacion,
         "timestamp": timestamp,
-        "value": {
-            "wind_speed": wind_speed,
-            "power_output": power_output
-        }
+        "value": value
     }
 
     return data
@@ -106,7 +132,7 @@ def save_data_to_json(data, filename):
     
     # Escribir los datos en el archivo molinos.json dentro del directorio
     with open(os.path.join(filename, "molinos.json"), "a") as file:
-        file.write(data + "\n")
+        file.write(json.dumps(data) + "\n")
 
 def generar_periodicamente():
     global ESPERA
@@ -115,10 +141,19 @@ def generar_periodicamente():
     
     global NUM_MOLINOS
     for i in range(NUM_MOLINOS):
-        datos = generate_windmill_data(i)
+        global p_error
+        new_data = generate_windmill_data(i, p_error)
+        url_post = "http://127.0.0.1:8000/datos-molinos/"
+        # A POST request to tthe API
+        post_response = requests.post(url_post, json=new_data)
+            # Print the response
+        post_response_json = post_response.json()
+        print(post_response_json)
+        # Guardar datos
         directory = "/home/cvp/Entrega-3-iot/data"
-        # save_data_to_json(datos, directory)
+        save_data_to_json(new_data, directory)
 
 NUM_MOLINOS = 10
 ESPERA = 10
+p_error = 0.1
 generar_periodicamente()
