@@ -75,7 +75,6 @@ def obtener_medias():
 
 
 
-from typing import List
 
 @molinos.get("/media-ubi/{ubicacion}", response_model=Dict[str, float])
 def obtener_media_por_ubicacion(ubicacion: str):
