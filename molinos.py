@@ -163,7 +163,6 @@ def generar_periodicamente():
         post_response = requests.post(url_post, json=new_data)
             # Print the response
         post_response_json = post_response.json()
-        print(post_response_json)
         # Guardar datos
         # directory = "/home/cvp/Entrega-3-iot/data"
         # save_data_to_json(new_data, directory)
