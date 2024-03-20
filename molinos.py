@@ -61,9 +61,6 @@ info_modelos = [
     }
 ]
 
-def letras_aleatorias():
-    return ''.join(random.choices(string.ascii_letters, k=3))
-
 def generate_windmill_data(mill_id, probabilidad_error):
     """
     Función para generar datos simulados de un molino de viento.
@@ -79,33 +76,44 @@ def generate_windmill_data(mill_id, probabilidad_error):
     
     
     # --- Probabilidad de datos erroneos -----
+    error = False
+    e_mj = ""
     # Aplicar posibles errores
-    if random.random() < probabilidad_error:
-        value = "Error de lectura"
-    else:
-        if random.random() <  probabilidad_error:
-            velocidad_viento *= -1    # Vuelve la velocidad negativa 
-        elif random.random() <  probabilidad_error:
-            produccion_energia = letras_aleatorias()  # Devuelve 3 letras aleatorias en lugar de números
-        elif random.random() <  probabilidad_error:
-            temperatura_ambiente *= 100     # Eleva la temperatura por 100
-        elif random.random() <  probabilidad_error:
-            direccion_viento = letras_aleatorias()  # Devuelve 3 letras aleatorias en lugar de números
-        elif random.random() <  probabilidad_error:
-            presion_atmosferica *= -20     # Disminuye la presión 20 veces
-        elif random.random() <  probabilidad_error:
-            humedad = letras_aleatorias()  # Devuelve 3 letras aleatorias en lugar de números
-        elif random.random() <  probabilidad_error:
-            vibraciones = letras_aleatorias()
-    value = {
-            "velocidad_viento": velocidad_viento,
-            "direccion_viento": direccion_viento,
-            "produccion_energia":produccion_energia,
-            "temperatura_ambiente": temperatura_ambiente,
-            "humedad": humedad,
-            "presion_atmosferica": presion_atmosferica,
-            "vibraciones": vibraciones
-        }    
+
+    if random.random() <  probabilidad_error:
+        velocidad_viento *= -1    # Vuelve la velocidad negativa 
+        error = True
+        e_mj += "\nError de velocidad_viento"
+    elif random.random() <  probabilidad_error:
+        produccion_energia *= -0.5  # Devuelve 3 letras aleatorias en lugar de números
+        error = True
+        e_mj += "\nError de produccion_energia"
+    elif random.random() <  probabilidad_error:
+        temperatura_ambiente *= 100     # Eleva la temperatura por 100
+        error = True
+        e_mj += "\nError de temperatura_ambiente"
+    elif random.random() <  probabilidad_error:
+        direccion_viento *= -0.5  # Devuelve 3 letras aleatorias en lugar de números
+        error = True
+        e_mj += "\nError de direccion_viento"
+    elif random.random() <  probabilidad_error:
+        presion_atmosferica *= -20     # Disminuye la presión 20 veces
+        error = True
+        e_mj += "\nError de presion_atmosferica"
+    elif random.random() <  probabilidad_error:
+        humedad *= -0.5  # Devuelve 3 letras aleatorias en lugar de números
+        error = True
+        e_mj += "\nError de humedad"
+    elif random.random() <  probabilidad_error:
+        vibraciones *= -0.5
+        error = True
+        e_mj += "\nError de vibraciones"
+    if error:
+        mensaje = "{}: {}".format(mill_id,e_mj)
+        print(mensaje)
+
+
+ 
     # Obtener modelo y ubicación para el molino
     id = info_modelos[mill_id]["id"]
     modelo = info_modelos[mill_id]["modelo"]
@@ -117,9 +125,16 @@ def generate_windmill_data(mill_id, probabilidad_error):
         "model": modelo,
         "location": ubicacion,
         "timestamp": timestamp,
-        "value": value
+        "value": {
+            "velocidad_viento": velocidad_viento,
+            "direccion_viento": direccion_viento,
+            "produccion_energia":produccion_energia,
+            "temperatura_ambiente": temperatura_ambiente,
+            "humedad": humedad,
+            "presion_atmosferica": presion_atmosferica,
+            "vibraciones": vibraciones
+        }
     }
-
     return data
 
 def save_data_to_json(data, filename):
@@ -150,8 +165,8 @@ def generar_periodicamente():
         post_response_json = post_response.json()
         print(post_response_json)
         # Guardar datos
-        directory = "/home/cvp/Entrega-3-iot/data"
-        save_data_to_json(new_data, directory)
+        # directory = "/home/cvp/Entrega-3-iot/data"
+        # save_data_to_json(new_data, directory)
 
 NUM_MOLINOS = 10
 ESPERA = 10

@@ -1,5 +1,5 @@
 # Comando uvicorn main:molinos --reload
-from typing import Dict
+from typing import Dict, Union
 from fastapi import FastAPI,  HTTPException, status
 from pydantic import BaseModel, validator
 
@@ -38,28 +38,18 @@ class DatosMolino(BaseModel):
         return v
 
 
-# Lista para almacenar los datos de los molinos
-datos_molinos = []
-# Endpoint POST para subir datos de los molinos
-@molinos.post("/datos-molinos/")
-def subir_datos(datos: DatosMolino):
-    # Agregar los datos a la lista
-    datos_molinos.append(datos)
-    return datos
-
-@molinos.get("/medias-global", response_model=Dict[str, float])
-def obtener_medias():
-    # Obtiene los datos generados y calcula las medias
-    molinos_generados = datos_molinos
-    
+# Función para calcular las medias de los datos de los molinos
+def calcular_medias(molinos_generados, origen):
     if isinstance(molinos_generados, list):
         total_molinos = len(molinos_generados)
         
         if total_molinos == 0:
+            # Si no hay datos de molinos, devuelve un mensaje indicando que no hay datos disponibles
             return {"message": "No hay datos de molinos disponibles"}
         
-        # Calcula las medias
+        # Calcula las medias de los diferentes parámetros de los molinos
         medias = {
+            "Media sobre": origen,  # Origen de los datos para la media
             "media_velocidad_viento": sum(m.value.get('velocidad_viento', 0) for m in molinos_generados) / total_molinos,
             "media_direccion_viento": sum(m.value.get('direccion_viento', 0) for m in molinos_generados) / total_molinos,
             "media_produccion_energia": sum(m.value.get('produccion_energia', 0) for m in molinos_generados) / total_molinos,
@@ -71,86 +61,66 @@ def obtener_medias():
         
         return medias
     else:
-        return {"message": "No se pudieron obtener los datos de los molinos"}
+        # Si los datos de entrada no son una lista, devuelve un mensaje indicando que la entrada no es válida
+        return {"message": "La entrada no es una lista"}
 
 
+# Lista para almacenar los datos de los molinos
+datos_molinos = []
+# Endpoint POST para subir datos de los molinos
+@molinos.post("/datos-molinos/")
+def subir_datos(datos: DatosMolino):
+    # Agregar los datos a la lista
+    datos_molinos.append(datos)
+    return datos
+# Endpoints para obtener medias de los datos de los molinos
 
+@molinos.get("/medias-global", response_model=Dict[str, Union[float, str]])
+def obtener_medias():
+    """
+    Endpoint para obtener las medias globales de todos los molinos generados.
+    """
+    # Obtiene los datos generados y calcula las medias    
+    return calcular_medias(datos_molinos, "Todos los molinos")
 
-@molinos.get("/media-ubi/{ubicacion}", response_model=Dict[str, float])
+@molinos.get("/media-ubi/{ubicacion}", response_model=Dict[str, Union[float, str]])
 def obtener_media_por_ubicacion(ubicacion: str):
+    """
+    Endpoint para obtener las medias de los molinos ubicados en una ubicación específica.
+    """
     # Obtiene los datos generados y filtra por ubicación
     molinos_generados_ubicacion = [m for m in datos_molinos if m.location == ubicacion]
-    
     if not molinos_generados_ubicacion:
+        # Si no hay datos para la ubicación especificada, devuelve un error 404
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No se encontraron datos para la ubicación {ubicacion}")
-    
-    total_molinos_ubicacion = len(molinos_generados_ubicacion)
-    
-    # Calcula las sumas de cada atributo
-    suma_velocidad_viento = sum(m.value['velocidad_viento'] for m in molinos_generados_ubicacion)
-    suma_direccion_viento = sum(m.value['direccion_viento'] for m in molinos_generados_ubicacion)
-    suma_produccion_energia = sum(m.value['produccion_energia'] for m in molinos_generados_ubicacion)
-    suma_temperatura_ambiente = sum(m.value['temperatura_ambiente'] for m in molinos_generados_ubicacion)
-    suma_humedad = sum(m.value['humedad'] for m in molinos_generados_ubicacion)
-    suma_presion_atmosferica = sum(m.value['presion_atmosferica'] for m in molinos_generados_ubicacion)
-    suma_vibraciones = sum(m.value['vibraciones'] for m in molinos_generados_ubicacion)
-    
-    # Calcula las medias
-    media_velocidad_viento = suma_velocidad_viento / total_molinos_ubicacion
-    media_direccion_viento = suma_direccion_viento / total_molinos_ubicacion
-    media_produccion_energia = suma_produccion_energia / total_molinos_ubicacion
-    media_temperatura_ambiente = suma_temperatura_ambiente / total_molinos_ubicacion
-    media_humedad = suma_humedad / total_molinos_ubicacion
-    media_presion_atmosferica = suma_presion_atmosferica / total_molinos_ubicacion
-    media_vibraciones = suma_vibraciones / total_molinos_ubicacion
-    
     # Devuelve las medias como un diccionario
-    return {
-        "media_velocidad_viento": media_velocidad_viento,
-        "media_direccion_viento": media_direccion_viento,
-        "media_produccion_energia": media_produccion_energia,
-        "media_temperatura_ambiente": media_temperatura_ambiente,
-        "media_humedad": media_humedad,
-        "media_presion_atmosferica": media_presion_atmosferica,
-        "media_vibraciones": media_vibraciones
-    }
+    return calcular_medias(molinos_generados_ubicacion, ubicacion)
 
-@molinos.get("/media-modelo/{modelo}", response_model=Dict[str, float])
+@molinos.get("/media-modelo/{modelo}", response_model=Dict[str, Union[float, str]])
 def obtener_media_por_modelo(modelo: str):
+    """
+    Endpoint para obtener las medias de los molinos de un modelo específico.
+    """
     # Obtiene los datos generados y filtra por modelo
     molinos_generados_modelo = [m for m in datos_molinos if m.model == modelo]
     
     if not molinos_generados_modelo:
+        # Si no hay datos para el modelo especificado, devuelve un error 404
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No se encontraron datos para la modelo {modelo}")
-    
-    total_molinos_modelo = len(molinos_generados_modelo)
-    
-    # Calcula las sumas de cada atributo
-    suma_velocidad_viento = sum(m.value['velocidad_viento'] for m in molinos_generados_modelo)
-    suma_direccion_viento = sum(m.value['direccion_viento'] for m in molinos_generados_modelo)
-    suma_produccion_energia = sum(m.value['produccion_energia'] for m in molinos_generados_modelo)
-    suma_temperatura_ambiente = sum(m.value['temperatura_ambiente'] for m in molinos_generados_modelo)
-    suma_humedad = sum(m.value['humedad'] for m in molinos_generados_modelo)
-    suma_presion_atmosferica = sum(m.value['presion_atmosferica'] for m in molinos_generados_modelo)
-    suma_vibraciones = sum(m.value['vibraciones'] for m in molinos_generados_modelo)
-    
-    # Calcula las medias
-    media_velocidad_viento = suma_velocidad_viento / total_molinos_modelo
-    media_direccion_viento = suma_direccion_viento / total_molinos_modelo
-    media_produccion_energia = suma_produccion_energia / total_molinos_modelo
-    media_temperatura_ambiente = suma_temperatura_ambiente / total_molinos_modelo
-    media_humedad = suma_humedad / total_molinos_modelo
-    media_presion_atmosferica = suma_presion_atmosferica / total_molinos_modelo
-    media_vibraciones = suma_vibraciones / total_molinos_modelo
-    
     # Devuelve las medias como un diccionario
-    return {
-        "media_velocidad_viento": media_velocidad_viento,
-        "media_direccion_viento": media_direccion_viento,
-        "media_produccion_energia": media_produccion_energia,
-        "media_temperatura_ambiente": media_temperatura_ambiente,
-        "media_humedad": media_humedad,
-        "media_presion_atmosferica": media_presion_atmosferica,
-        "media_vibraciones": media_vibraciones
-    }
+    return calcular_medias(molinos_generados_modelo, modelo)
 
+@molinos.get("/media/{mill_id}", response_model=Dict[str, Union[float, str]])
+def obtener_media_por_mill_id(mill_id: int):
+    """
+    Endpoint para obtener las medias de un molino específico identificado por su ID de molino.
+    """
+    # Obtiene los datos generados y filtra por mill_id
+    molinos_generados_mill_id = [m for m in datos_molinos if m.mill_id == mill_id]
+    
+    if not molinos_generados_mill_id:
+        # Si no hay datos para el ID de molino especificado, devuelve un error 404
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No se encontraron datos para la mill_id {mill_id}")
+    
+    # Devuelve las medias como un diccion
+    return calcular_medias(molinos_generados_mill_id, mill_id)
